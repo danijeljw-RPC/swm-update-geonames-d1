@@ -48,7 +48,7 @@ jobs:
           chmod +x ./update-geonames.sh
           ./update-geonames.sh
 
-                - name: Update last_run
+      - name: Update last_run
         run: |
           date -u +"%Y-%m-%dT%H:%M:%SZ" > ./last_run
 
