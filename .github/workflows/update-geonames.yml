@@ -1,0 +1,68 @@
+name: Update GeoNames
+
+on:
+  schedule:
+    # Every Saturday at 03:00 UTC.
+    #
+    # GitHub cron schedules use UTC.
+    - cron: "0 3 * * 6"
+
+  # Allow us to run it manually as well.
+  workflow_dispatch:
+
+concurrency:
+  group: update-geonames
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update GeoNames D1
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 20
+
+    permissions:
+      contents: write
+
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install SQLite
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes sqlite3
+
+      - name: Update GeoNames
+        working-directory: d1
+        run: |
+          chmod +x ./update-geonames.sh
+          ./update-geonames.sh
+
+                - name: Update last_run
+        run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > ./last_run
+
+      - name: Commit last_run
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add ./last_run
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Update GeoNames last run"
+          git push
